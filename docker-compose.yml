@@ -3,7 +3,7 @@ version: "3.8"
 services:
   db:
     image: postgis/postgis:15-3.3
-    container_name: geo_postgres
+    container_name: ladbroke-grove-db
     restart: always
     environment:
       POSTGRES_USER: myuser
@@ -21,7 +21,7 @@ services:
 
   backend:
     build: .
-    container_name: fastapi_backend
+    container_name: ladbroke-grove-backend
     restart: always
     depends_on:
       db:
