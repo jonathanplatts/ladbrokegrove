@@ -19,12 +19,12 @@ def fetch_and_populate_locations(
 
     csv_filename = "tube_stations.csv"
 
+    # Save to file as a backstop in case db logic fails.
     with open(csv_filename, "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Name", "Latitude", "Longitude", "Category"])
 
         for location_type in location_types:
-            print(f"Fetching places of type: {location_type}")
             results = fetch_places(location_type, base_location, radius)
 
             for place in results:
@@ -45,10 +45,8 @@ def fetch_and_populate_locations(
                         )
                     )
 
-        print(f"Finished saving {len(unique_names)} landmarks to csv.")
-
     # Save to DB.
-    print(f"Saving landmarks to db.")
+    print(f"Saving landmarks to db...")
     db = SessionLocal()
     bulk_insert_locations(db, locations)
     db.close()

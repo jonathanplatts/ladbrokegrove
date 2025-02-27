@@ -23,7 +23,7 @@ class Location(Base):
     geom = Column(Geometry("POINT", srid=4326), nullable=False)
 
     # (name, location_type) should be unique
-    # i.e (London Bridge, subway_station) and (London Bridge, place_of_interest) is allowed.
+    # e.g: (London Bridge, subway_station) and (London Bridge, place_of_interest) can both exist.
     __table_args__ = (
         UniqueConstraint("name", "location_type", name="uq_location_name_type"),
     )

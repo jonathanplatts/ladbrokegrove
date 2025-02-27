@@ -1,5 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
+from datetime import timedelta
+from typing import Optional
+
 from sqlalchemy.orm import Session
+from slowapi.middleware import SlowAPIMiddleware
+from shapely.geometry import Point
 
 from app.auth import create_access_token, verify_token
 from app.config import setup_cors
@@ -12,11 +17,6 @@ from app.routes.distances import handle_get_distances
 from app.schemas.RouteRequest import RouteRequest
 from app.schemas.RouteResponse import RouteResponse
 
-from datetime import timedelta
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-from shapely.geometry import Point
-from typing import Optional
 
 app = FastAPI()
 
@@ -61,12 +61,13 @@ def get_distances(request: Request, db: Session = Depends(get_db)):
 @app.post("/routes/plan", response_model=RouteResponse)
 @limiter.limit("10/minute", key_func=get_user_key)
 def create_new_route(
-    request: RouteRequest,
+    request: Request,
+    route_request: RouteRequest,
     db: Session = Depends(get_db),
     user_data: dict = Depends(verify_token),
 ):
     try:
-        return handle_create_new_route(request, db)
+        return handle_create_new_route(route_request, db)
     except HTTPException as e:
         raise e
     except Exception as e:

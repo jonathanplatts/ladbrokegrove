@@ -1,14 +1,15 @@
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy.orm import Session
-from app.database.models import Location, LocationType
+
 from geoalchemy2.shape import to_shape
+from sqlalchemy.orm import Session
+
+from app.database.models import Location, LocationType
 
 
 def handle_get_locations(db: Session, location_type: LocationType = None):
     query = db.query(Location)
 
     if location_type is not None:
-        print("filtering")
         query = query.filter(Location.location_type == location_type)
 
     locations = query.all()

@@ -1,27 +1,19 @@
 from fastapi import HTTPException
 import logging
 import traceback
-from app.schemas import RouteRequest, RouteResponse
 
 from openai import OpenAI
-import os
-from dotenv import load_dotenv
+import googlemaps
+from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.enums import LocationType
 from app.core.prompts import generate_initial_prompt, generate_corrective_prompt
+from app.schemas import RouteRequest, RouteResponse
 from app.services.route_planner import RoutePlannerLLM
 from app.services.places_lookup import get_location_by_name, get_nearby_locations
 
-import googlemaps
-
-from sqlalchemy.orm import Session
-
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 logging.basicConfig(level=logging.INFO)
-
 
 def handle_create_new_route(route_request: RouteRequest, db: Session) -> RouteResponse:
     try:
@@ -58,14 +50,10 @@ def handle_create_new_route(route_request: RouteRequest, db: Session) -> RouteRe
                 start_location.name, float(route_request.route_time), False
             )
 
-        print(f"Initial prompt - {prompt}")
-
         is_route_valid = False
-        route_planner = RoutePlannerLLM(api_key=OPENAI_API_KEY)
+        route_planner = RoutePlannerLLM(api_key=settings.OPENAI_API_KEY)
         for i in range(route_request.max_attempts - 1):
             try:
-                print("Calling LLM with prompt:")
-                print(prompt)
                 llm_response = route_planner.get_response(prompt)
                 waypoints = llm_response.split(", ")
 
@@ -92,10 +80,10 @@ def handle_create_new_route(route_request: RouteRequest, db: Session) -> RouteRe
                 attempts_needed = i + 1
 
                 if is_route_valid:
-                    print("Route validated - all good.")
+                    print("Valid route found!")
                     break
                 else:
-                    print("Route needs refinement")
+                    print("Route found but needs refinement - generating new LLM prompt...")
                     prompt = generate_corrective_prompt(
                         route_request.route_time, route_duration, route_distance
                     )  # Combine with validate_route?
@@ -111,7 +99,7 @@ def handle_create_new_route(route_request: RouteRequest, db: Session) -> RouteRe
                 detail="Could not produce a valid route - please try again.",
             )
 
-        print("Finished planning route - generating url.")
+        print("Finished planning route - generating google maps url...")
         google_maps_url = generate_maps_url(
             route_request.start_location, waypoints_plus_cities
         )
@@ -136,11 +124,10 @@ def handle_create_new_route(route_request: RouteRequest, db: Session) -> RouteRe
 
 
 def get_llm_response(prompt: str) -> str:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    print(client)
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo", # Move to env variable eventually, don't want it configurable for now - use the cheapest!
             store=True,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -173,12 +160,12 @@ def get_route_duration_from_google_maps(
         if not directions:
             raise HTTPException(status_code=404, detail="No route found")
 
-        # Print the route for now.
-        for i, leg in enumerate(directions[0]["legs"]):
-            print(f"Leg {i+1}: {leg['start_address']} → {leg['end_address']}")
-            print(
-                f"Distance: {leg['distance']['text']}, Duration: {leg['duration']['text']}\n"
-            )
+        # Uncomment this code to print the route for debugging.
+        # for i, leg in enumerate(directions[0]["legs"]):
+        #     print(f"Leg {i+1}: {leg['start_address']} → {leg['end_address']}")
+        #     print(
+        #         f"Distance: {leg['distance']['text']}, Duration: {leg['duration']['text']}\n"
+        #     )
 
         # Calculate distance and time to check.
         total_distance = 0
@@ -239,8 +226,6 @@ def validate_route(
 ) -> bool:
     max_allowed_time = requested_time * 1.5
     max_allowed_distance = (requested_time * 1.5) * (4 / 60)
-    print("validate route")
-    print(max_allowed_time, max_allowed_distance)
 
     if route_duration > max_allowed_time or route_distance > max_allowed_distance:
         return False
@@ -249,26 +234,15 @@ def validate_route(
 
 
 def generate_maps_url(start_location: str, waypoints: list[str]) -> str:
-    print("generate maps fn")
-    print(start_location)
-    print(waypoints)
     base_url = "https://www.google.com/maps/dir/?api=1"
     if len(waypoints) < 1:
         raise ValueError("Circular route must have at least one waypoint!")
 
     origin = destination = start_location
-
     waypoints_param = "|".join(waypoints) if waypoints else ""
 
-    print(origin)
-    print(destination)
-    print(waypoints_param)
-
-    print(f"waypoints param: {waypoints_param}")
     url = f"{base_url}&origin={origin}&destination={destination}&travelmode=walking"
     if waypoints_param:
         url += f"&waypoints={waypoints_param}"
-
-    print(url)
 
     return url

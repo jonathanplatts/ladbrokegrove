@@ -1,25 +1,28 @@
 from fastapi.middleware.cors import CORSMiddleware
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings 
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-dotenv_path = os.path.join(ROOT_DIR, ".env")
-load_dotenv(dotenv_path)
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-DATABASE_URL = os.getenv("DATABASE_URL")
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 2880
+    DB_HOST: str = "db"
+    DB_NAME: str
+    DB_USERNAME: str
+    DB_PASSWORD: str
+    DB_PORT: int = 5432
+    DB_URL: str | None = None # Optional
+    GOOGLE_MAPS_API_KEY: str
+    OPENAI_API_KEY: str
 
-missing_vars = [
-    var
-    for var in ["SECRET_KEY", "DATABASE_URL", "GOOGLE_MAPS_API_KEY", "OPENAI_API_KEY"]
-    if not os.getenv(var)
-]
-if missing_vars:
-    raise ValueError(
-        f"Missing required environment variables: {', '.join(missing_vars)}"
-    )
+    @property
+    def DATABASE_URL(self) -> str:
+        return self.DB_URL or "postgresql://{self.DB_USERNAME}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
 
 
 def setup_cors(app):

@@ -1,6 +1,6 @@
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from app.database.models import Distance, DistanceUnit
+from app.database.models import Distance
 from geoalchemy2.shape import to_shape
 
 

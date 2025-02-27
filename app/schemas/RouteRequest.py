@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+
 from app.core.constants import DEFAULT_NUMBER_LLM_CALLS
 
 

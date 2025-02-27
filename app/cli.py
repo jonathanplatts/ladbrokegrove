@@ -1,10 +1,10 @@
 import typer
-from app.database.session import Base, engine, SessionLocal
 
+from app.database.init_db import initialize_db
+from app.database.models import Location, LocationType, Distance, DistanceUnit
+from app.database.session import SessionLocal
 from app.services.data_import import fetch_and_populate_locations
 from app.services.places_lookup import get_tube_stations, get_nearby_locations
-from app.database.models import Location, LocationType, Distance, DistanceUnit
-from app.database.init_db import initialize_db
 
 app = typer.Typer()
 
@@ -12,7 +12,7 @@ CENTRAL_LONDON_COORDS = "51.5074,-0.1278"
 
 # Reminder: run these from docker container...
 # docker exec -it fastapi_backend bash
-# python cli.py <populate-tube-stations> # Note formatting
+# python cli.py <populate-tube-stations>
 
 
 @app.command()
@@ -31,7 +31,7 @@ def populate_tube_stations():
         db = SessionLocal()
 
         base_location = CENTRAL_LONDON_COORDS
-        radius = 5000  # 5km
+        radius = 5000  # metres
         location_types = ["subway_station"]
 
         fetch_and_populate_locations(location_types, base_location, radius)
@@ -48,7 +48,7 @@ def populate_landmarks():
         db = SessionLocal()
 
         base_location = CENTRAL_LONDON_COORDS
-        radius = 5000  # 5km
+        radius = 5000  # metres
         location_types = [
             "tourist_attraction",
             "museum",
@@ -93,8 +93,6 @@ def populate_distance_table():
             nearby_locations = get_nearby_locations(
                 db, station, radius, [LocationType.SUBWAY_STATION]
             )
-
-            print(f"Nearby locs: {nearby_locations}")
 
             distances_to_add = [
                 Distance(

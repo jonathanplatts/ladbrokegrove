@@ -1,10 +1,9 @@
+from geoalchemy2.shape import from_shape
+from shapely.geometry import Point
 from sqlalchemy.orm import Session
 
 from app.database.models import Location
 from app.database.models import LocationType
-
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
 
 
 def insert_location(
