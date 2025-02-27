@@ -29,6 +29,16 @@ SETUP INSTRUCTIONS:
 * Run the app using:
     docker-compose up --build
 
+* Data (locations/landmarks/distances) can be populated using the commands in cli.py
+* The commands to run, in order, are:
+
+docker exec -it fastapi_backend bash
+python cli.py create-tables
+python cli.py populate-tube-stations
+python cli.py populate-landmarks
+python cli.py populate-distance-table
+
+(Script coming soon...)
 
 ENDPOINTS:
 
